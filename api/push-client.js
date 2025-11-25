@@ -22,7 +22,7 @@ export default async function handler(req, res) {
     const url = req.url;
 
     // -------------------------------------------------------------------
-    // 1️⃣ Endpoint que RECEBE PUSH (Vercel funcionará como "cliente")
+    // 1️ Endpoint que RECEBE PUSH (Vercel funcionará como "cliente")
     // -------------------------------------------------------------------
     if (url.startsWith("/api/push-client/_push")) {
         let body = "";
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
     }
 
     // -------------------------------------------------------------------
-    // 2️⃣ Endpoint que retorna todos os logs JSON
+    // 2️ Endpoint que retorna todos os logs JSON
     // -------------------------------------------------------------------
     if (url.startsWith("/api/push-client/pushes")) {
         const data = fs.readFileSync(LOG_FILE, "utf8")
@@ -56,7 +56,7 @@ export default async function handler(req, res) {
     }
 
     // -------------------------------------------------------------------
-    // 3️⃣ Endpoint para obter subscription
+    // 3️ Endpoint para obter subscription
     // -------------------------------------------------------------------
     if (url.startsWith("/api/push-client/subscription")) {
         return res.status(200).json(subscription);
