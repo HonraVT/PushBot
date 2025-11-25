@@ -1,80 +1,78 @@
 import fs from "fs";
-import path from "path";
 
 const LOG_FILE = "/tmp/push.log";
 
-export default async function handler(req, res) {
-    const { pathname } = new URL(req.url, "http://localhost");
-
-    // ------------------------------------------------------------------
-    // Inicia arquivo /tmp/push.log se não existir
-    // ------------------------------------------------------------------
+function ensureLogFile() {
     if (!fs.existsSync(LOG_FILE)) {
         fs.writeFileSync(LOG_FILE, "");
     }
+}
 
-    // ------------------------------------------------------------------
-    // 👉 1. Endpoint que RECEBE PUSH
-    //     URL:  POST /api/push-client/_push
-    // ------------------------------------------------------------------
-    if (pathname.endsWith("/_push")) {
-        try {
-            const body = await readBody(req);
-            const entry = `[${new Date().toISOString()}] ${body}\n`;
+export default async function handler(req, res) {
+    ensureLogFile();
 
-            fs.appendFileSync(LOG_FILE, entry);
+    const url = new URL(req.url, "http://localhost");
+    const path = url.pathname;
+    const query = url.searchParams;
 
-            return res.status(201).json({ received: true });
-        } catch (err) {
-            return res.status(500).json({ error: "Fail to write log" });
-        }
+    // ---------------------
+    // Route: POST /api/push-client/_push
+    // ---------------------
+    if (path.endsWith("/_push") && req.method === "POST") {
+        const body = await readBody(req);
+
+        fs.appendFileSync(
+            LOG_FILE,
+            `[${new Date().toISOString()}] ${body}\n`
+        );
+
+        return res.status(201).json({ received: true });
     }
 
-    // ------------------------------------------------------------------
-    // 👉 2. Endpoint que retorna JSON com os pushes registrados
-    //     URL: GET /api/push-client/pushes
-    // ------------------------------------------------------------------
-    if (pathname.endsWith("/pushes")) {
-        const content = fs.readFileSync(LOG_FILE, "utf8")
+    // ---------------------
+    // Route: GET /api/push-client/pushes
+    // ---------------------
+    if (path.endsWith("/pushes") && req.method === "GET") {
+        const lines = fs
+            .readFileSync(LOG_FILE, "utf-8")
             .split("\n")
-            .filter(x => x.trim());
+            .filter(Boolean);
 
-        const items = content.map(line => {
-            const match = line.match(/^\[(.*?)\] (.*)$/);
+        const pushes = lines.map((line) => {
+            const m = line.match(/^\[(.*?)\] (.*)$/);
             return {
-                timestamp: match ? match[1] : null,
-                body: match ? match[2] : line
+                timestamp: m ? m[1] : null,
+                body: m ? m[2] : line,
             };
         });
 
-        return res.status(200).json({ pushes: items });
+        return res.status(200).json({ pushes });
     }
 
-    // ------------------------------------------------------------------
-    // 👉 3. Subscription estática para enviar notificações
-    //     URL: GET /api/push-client/subscription
-    // ------------------------------------------------------------------
-    if (pathname.endsWith("/subscription")) {
+    // ---------------------
+    // Route: GET /api/push-client/subscription
+    // ---------------------
+    if (path.endsWith("/subscription") && req.method === "GET") {
         return res.status(200).json({
             endpoint: "https://example.pushservice.com/send/123",
             keys: {
                 p256dh: "key",
-                auth: "authkey"
-            }
+                auth: "authkey",
+            },
         });
     }
 
+    // ---------------------
+    // Not found
+    // ---------------------
     return res.status(404).json({ error: "Not found" });
 }
 
-
-// --------------------------------------------------------
-// Função auxiliar: lê o corpo da requisição
-// --------------------------------------------------------
+// Helper para ler o corpo da requisição
 function readBody(req) {
     return new Promise((resolve) => {
         let data = "";
-        req.on("data", chunk => (data += chunk));
+        req.on("data", (chunk) => (data += chunk));
         req.on("end", () => resolve(data));
     });
 }
