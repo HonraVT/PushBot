@@ -1,67 +1,80 @@
 import fs from "fs";
 import path from "path";
 
-// Arquivo onde os pushes recebidos serão armazenados
-const LOG_FILE = path.join(process.cwd(), "push.log");
-
-// Subscription simulada (esta subscription será passada ao servidor que envia notificações)
-export const subscription = {
-    endpoint: "https://seu-endpoint-de-push-aqui",
-    keys: {
-        p256dh: "chave_p256dh_aqui",
-        auth: "chave_auth_aqui"
-    }
-};
-
-// Cria arquivo se não existir
-if (!fs.existsSync(LOG_FILE)) {
-    fs.writeFileSync(LOG_FILE, "");
-}
+const LOG_FILE = "/tmp/push.log";
 
 export default async function handler(req, res) {
-    const url = req.url;
+    const { pathname } = new URL(req.url, "http://localhost");
 
-    // -------------------------------------------------------------------
-    // 1️ Endpoint que RECEBE PUSH (Vercel funcionará como "cliente")
-    // -------------------------------------------------------------------
-    if (url.startsWith("/api/push-client/_push")) {
-        let body = "";
-        req.on("data", chunk => body += chunk);
-        req.on("end", () => {
-            const logEntry = `[${new Date().toISOString()}] ${body}\n`;
+    // ------------------------------------------------------------------
+    // Inicia arquivo /tmp/push.log se não existir
+    // ------------------------------------------------------------------
+    if (!fs.existsSync(LOG_FILE)) {
+        fs.writeFileSync(LOG_FILE, "");
+    }
 
-            fs.appendFileSync(LOG_FILE, logEntry);
+    // ------------------------------------------------------------------
+    // 👉 1. Endpoint que RECEBE PUSH
+    //     URL:  POST /api/push-client/_push
+    // ------------------------------------------------------------------
+    if (pathname.endsWith("/_push")) {
+        try {
+            const body = await readBody(req);
+            const entry = `[${new Date().toISOString()}] ${body}\n`;
+
+            fs.appendFileSync(LOG_FILE, entry);
 
             return res.status(201).json({ received: true });
-        });
-        return;
+        } catch (err) {
+            return res.status(500).json({ error: "Fail to write log" });
+        }
     }
 
-    // -------------------------------------------------------------------
-    // 2️ Endpoint que retorna todos os logs JSON
-    // -------------------------------------------------------------------
-    if (url.startsWith("/api/push-client/pushes")) {
-        const data = fs.readFileSync(LOG_FILE, "utf8")
+    // ------------------------------------------------------------------
+    // 👉 2. Endpoint que retorna JSON com os pushes registrados
+    //     URL: GET /api/push-client/pushes
+    // ------------------------------------------------------------------
+    if (pathname.endsWith("/pushes")) {
+        const content = fs.readFileSync(LOG_FILE, "utf8")
             .split("\n")
-            .filter(x => x.trim() !== "")
-            .map(line => {
-                const match = line.match(/^\[(.*)\] (.*)$/);
-                return {
-                    timestamp: match ? match[1] : null,
-                    body: match ? match[2] : line
-                };
-            });
+            .filter(x => x.trim());
 
-        return res.status(200).json({ pushes: data });
+        const items = content.map(line => {
+            const match = line.match(/^\[(.*?)\] (.*)$/);
+            return {
+                timestamp: match ? match[1] : null,
+                body: match ? match[2] : line
+            };
+        });
+
+        return res.status(200).json({ pushes: items });
     }
 
-    // -------------------------------------------------------------------
-    // 3️ Endpoint para obter subscription
-    // -------------------------------------------------------------------
-    if (url.startsWith("/api/push-client/subscription")) {
-        return res.status(200).json(subscription);
+    // ------------------------------------------------------------------
+    // 👉 3. Subscription estática para enviar notificações
+    //     URL: GET /api/push-client/subscription
+    // ------------------------------------------------------------------
+    if (pathname.endsWith("/subscription")) {
+        return res.status(200).json({
+            endpoint: "https://example.pushservice.com/send/123",
+            keys: {
+                p256dh: "key",
+                auth: "authkey"
+            }
+        });
     }
 
-    // Default
-    res.status(404).json({ error: "Not found" });
+    return res.status(404).json({ error: "Not found" });
+}
+
+
+// --------------------------------------------------------
+// Função auxiliar: lê o corpo da requisição
+// --------------------------------------------------------
+function readBody(req) {
+    return new Promise((resolve) => {
+        let data = "";
+        req.on("data", chunk => (data += chunk));
+        req.on("end", () => resolve(data));
+    });
 }
