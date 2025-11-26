@@ -1,10 +1,15 @@
-let memoryPushes = global.memoryPushes || [];
-global.memoryPushes = memoryPushes;
+// api/pushes.js
+if (!global.__pushes) global.__pushes = [];
 
-export default async function handler(req, res) {
+module.exports = function (req, res) {
   if (req.method !== "GET") {
-    return res.status(405).json({ error: "Method not allowed" });
+    res.statusCode = 405;
+    res.setHeader("Content-Type", "application/json");
+    res.end(JSON.stringify({ error: "method not allowed" }));
+    return;
   }
 
-  res.status(200).json({ pushes: memoryPushes });
-}
+  res.setHeader("Content-Type", "application/json");
+  res.statusCode = 200;
+  res.end(JSON.stringify({ pushes: global.__pushes }));
+};
