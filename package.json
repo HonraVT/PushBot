@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@vercel/kv": "latest"
+    "@vercel/edge-config": "latest"
   }
 }
