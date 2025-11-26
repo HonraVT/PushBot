@@ -2,25 +2,23 @@ import Redis from "ioredis";
 
 export default async function handler(req, res) {
   try {
-    const redis = new Redis({
-      host: process.env.REDIS_HOST,
-      port: Number(process.env.REDIS_PORT),
-      password: process.env.REDIS_PASSWORD,
-      tls: {} // obrigatório para RedisLabs na Vercel
+    // leitura do body no Node.js da Vercel
+    let body = "";
+    for await (const chunk of req) body += chunk;
+
+    const redis = new Redis(process.env.REDIS_URL, {
+      tls: {} // necessário para RedisLabs
     });
 
-    const body = await req.text();
     const key = `log:${Date.now()}`;
 
     await redis.set(key, body);
 
-    await redis.quit();
+    redis.quit();
 
-    return res.status(200).json({ ok: true });
+    return res.status(200).json({ ok: true, saved: key });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: err.message });
   }
 }
-
-
