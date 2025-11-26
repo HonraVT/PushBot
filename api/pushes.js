@@ -1,15 +1,28 @@
-// api/pushes.js
-if (!global.__pushes) global.__pushes = [];
+import fs from "node:fs";
 
-module.exports = function (req, res) {
+const LOG_FILE = "/tmp/push.log";
+
+export default function handler(req, res) {
   if (req.method !== "GET") {
-    res.statusCode = 405;
-    res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify({ error: "method not allowed" }));
-    return;
+    return res.status(405).json({ error: "method not allowed" });
   }
 
-  res.setHeader("Content-Type", "application/json");
-  res.statusCode = 200;
-  res.end(JSON.stringify({ pushes: global.__pushes }));
-};
+  if (!fs.existsSync(LOG_FILE)) {
+    return res.json({ pushes: [] });
+  }
+
+  const content = fs.readFileSync(LOG_FILE, "utf8");
+
+  const pushes = content
+    .split("\n")
+    .filter(Boolean)
+    .map(line => {
+      const match = line.match(/^\[(.*?)\] (.*)$/);
+      return {
+        timestamp: match?.[1] || "",
+        body: match?.[2] || ""
+      };
+    });
+
+  res.json({ pushes });
+}
