@@ -1,5 +1,9 @@
 import fs from "node:fs";
 
+export const config = {
+  runtime: "nodejs" // garante acesso ao filesystem
+};
+
 const LOG_FILE = "/tmp/push.log";
 
 export async function POST(request) {
