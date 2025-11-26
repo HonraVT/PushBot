@@ -1,8 +1,10 @@
 {
-  "name": "push-bot",
+  "name": "pushbot",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "dependencies": {
     "ioredis": "5.3.2"
   }
