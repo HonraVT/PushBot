@@ -16,7 +16,7 @@ function getRedisClient() {
 export default async function handler(req, res) {
   try {
     const client = getRedisClient();
-    const items = await client.lrange("push_logs", 0, -1); // note: lrange é lowercase em ioredis
+    const items = await client.lrange("push_logs", 0, -1);
     const logs = items.map(i => JSON.parse(i));
     res.status(200).json({ logs });
   } catch (err) {
