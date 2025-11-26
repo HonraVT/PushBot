@@ -1,27 +1,10 @@
-import fs from "node:fs";
+let memoryPushes = global.memoryPushes || [];
+global.memoryPushes = memoryPushes;
 
-const LOG_FILE = "/tmp/push.log";
-
-export async function GET() {
-  if (!fs.existsSync(LOG_FILE)) {
-    return new Response(JSON.stringify({ pushes: [] }), {
-      headers: { "Content-Type": "application/json" }
-    });
+export default async function handler(req, res) {
+  if (req.method !== "GET") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const content = fs.readFileSync(LOG_FILE, "utf8");
-  const pushes = content
-    .split("\n")
-    .filter(Boolean)
-    .map(line => {
-      const match = line.match(/^\[(.*?)\] (.*)$/);
-      return {
-        timestamp: match?.[1] || "",
-        body: match?.[2] || line
-      };
-    });
-
-  return new Response(JSON.stringify({ pushes }), {
-    headers: { "Content-Type": "application/json" }
-  });
+  res.status(200).json({ pushes: memoryPushes });
 }
