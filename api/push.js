@@ -5,10 +5,15 @@ export default async function handler(req, res) {
     let body = "";
     for await (const chunk of req) body += chunk;
 
-    const redis = new Redis(process.env.REDIS_URL); // ou host/port/password
+    const redis = new Redis(process.env.REDIS_URL);
 
-    // Adiciona o log no topo da lista "push_logs"
-    await redis.lpush("push_logs", body);
+    // Se body não for JSON, você pode transformar em objeto
+    const logEntry = {
+      timestamp: Date.now(),
+      data: body
+    };
+
+    await redis.lpush("push_logs", JSON.stringify(logEntry));
 
     redis.quit();
 
