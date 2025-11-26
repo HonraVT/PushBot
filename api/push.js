@@ -1,27 +1,22 @@
-import { createClient } from "redis";
+import Redis from "ioredis";
 
-const client = createClient({
-  socket: {
-    host: process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT
-  },
-  password: process.env.REDIS_PASSWORD || undefined
+const redis = new Redis({
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT,
+  password: process.env.REDIS_PASS
 });
 
-client.connect();
-
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "method not allowed" });
+  const body =
+    req.method === "POST"
+      ? JSON.stringify(req.body)
+      : JSON.stringify(req.query);
+
+  try {
+    await redis.lpush("push_logs", body);
+    res.status(200).json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  const body = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
-
-  await client.lPush("push_logs", JSON.stringify({
-    timestamp: new Date().toISOString(),
-    body
-  }));
-
-  res.status(201).json({ received: true });
 }
 
