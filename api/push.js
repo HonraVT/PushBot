@@ -1,4 +1,4 @@
-import { kv } from "@vercel/kv";
+import { get, set } from "@vercel/edge-config";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -10,10 +10,20 @@ export default async function handler(req, res) {
       ? req.body
       : JSON.stringify(req.body || "");
 
-  await kv.lpush("push_logs", {
-    timestamp: new Date().toISOString(),
-    body
-  });
+  // pega os logs existentes
+  const oldLogs = (await get("push_logs")) || [];
 
-  return res.status(201).json({ received: true });
+  // adiciona um novo log
+  const newLogs = [
+    ...oldLogs,
+    {
+      timestamp: new Date().toISOString(),
+      body
+    }
+  ];
+
+  // salva no edge config
+  await set("push_logs", newLogs);
+
+  return res.status(201).json({ saved: true });
 }
