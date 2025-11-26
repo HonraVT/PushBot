@@ -1,27 +1,19 @@
-import { put } from "@vercel/blob";
+import { kv } from "@vercel/kv";
 
 export default async function handler(req, res) {
-  const timestamp = Date.now();
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "method not allowed" });
+  }
 
-  const logData = {
-    method: req.method,
-    query: req.query,
-    headers: req.headers,
-    timestamp
-  };
+  const body =
+    typeof req.body === "string"
+      ? req.body
+      : JSON.stringify(req.body || "");
 
-  const logText = JSON.stringify(logData, null, 2);
-
-  // Nome único do arquivo
-  const blobName = `logs/${timestamp}.txt`;
-
-  // Salva no Blob
-  const { url } = await put(blobName, logText, {
-    access: "public", // se quiser acessar depois
+  await kv.lpush("push_logs", {
+    timestamp: new Date().toISOString(),
+    body
   });
 
-  return res.status(200).json({
-    ok: true,
-    saved_to: url
-  });
+  return res.status(201).json({ received: true });
 }
