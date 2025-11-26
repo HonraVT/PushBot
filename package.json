@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@vercel/edge-config": "latest"
+    "ioredis": "5.4.1"
   }
 }
