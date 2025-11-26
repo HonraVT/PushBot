@@ -1,3 +1,15 @@
+// api/pushes.js
+import Redis from "ioredis";
+
+let redis;
+
+function getRedisClient() {
+  if (!redis) {
+    redis = new Redis(process.env.REDIS_URL); // ou host/port/password
+  }
+  return redis;
+}
+
 export default async function handler(req, res) {
   try {
     const client = getRedisClient();
@@ -7,7 +19,7 @@ export default async function handler(req, res) {
       try {
         return JSON.parse(i);
       } catch {
-        return { raw: i }; // mantém a string se não for JSON
+        return { raw: i }; // mantém o conteúdo se não for JSON
       }
     });
 
