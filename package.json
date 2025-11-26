@@ -1,8 +1,5 @@
 {
   "name": "pushbot-vercel",
   "version": "1.0.0",
-  "engines": {
-  "node": "nodejs22.x"
-}
 }
 
