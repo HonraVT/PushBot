@@ -1,26 +1,26 @@
-import { createClient } from "redis";
+import Redis from "ioredis";
 
-let client;
+let redis;
 
-async function getClient() {
-  if (!client) {
-    client = createClient({
-      socket: {
-        host: process.env.REDIS_HOST,
-        port: process.env.REDIS_PORT,
-      },
+function getRedisClient() {
+  if (!redis) {
+    redis = new Redis({
+      host: process.env.REDIS_HOST,
+      port: process.env.REDIS_PORT,
       password: process.env.REDIS_PASSWORD || undefined,
     });
-    await client.connect();
   }
-  return client;
+  return redis;
 }
 
 export default async function handler(req, res) {
-  const client = await getClient();
-  const items = await client.lRange("push_logs", 0, -1);
-  const logs = items.map(i => JSON.parse(i));
-
-  res.status(200).json({ logs });
+  try {
+    const client = getRedisClient();
+    const items = await client.lrange("push_logs", 0, -1); // note: lrange é lowercase em ioredis
+    const logs = items.map(i => JSON.parse(i));
+    res.status(200).json({ logs });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch logs" });
+  }
 }
-
