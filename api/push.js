@@ -1,29 +1,27 @@
-import { get, set } from "@vercel/edge-config";
+import { createClient } from "redis";
+
+const client = createClient({
+  socket: {
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT
+  },
+  password: process.env.REDIS_PASSWORD || undefined
+});
+
+client.connect();
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "method not allowed" });
   }
 
-  const body =
-    typeof req.body === "string"
-      ? req.body
-      : JSON.stringify(req.body || "");
+  const body = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
 
-  // pega os logs existentes
-  const oldLogs = (await get("push_logs")) || [];
+  await client.lPush("push_logs", JSON.stringify({
+    timestamp: new Date().toISOString(),
+    body
+  }));
 
-  // adiciona um novo log
-  const newLogs = [
-    ...oldLogs,
-    {
-      timestamp: new Date().toISOString(),
-      body
-    }
-  ];
-
-  // salva no edge config
-  await set("push_logs", newLogs);
-
-  return res.status(201).json({ saved: true });
+  res.status(201).json({ received: true });
 }
+
