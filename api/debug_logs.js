@@ -20,8 +20,8 @@ export default async function handler(req, res) {
   const rawBody = Buffer.concat(chunks);
 
   console.log("Raw Body Length:", rawBody.length);
-  console.log("Raw Body (hex):", rawBody.toString("hex").substring(0, 2000));
-  console.log("Raw Body (base64):", rawBody.toString("base64").substring(0, 2000));
+  console.log("Raw Body (hex):", rawBody.toString("hex"));
+  console.log("Raw Body (base64):", rawBody.toString("base64"));
 
   // Try JSON parse (if applicable)
   try {
